@@ -20,22 +20,22 @@ r2   = None          #(optional): Planet radius along sub-stellar axis (in units
 r2off= None          #(optional): Angle to the elongated axis with respect to the sub-stellar axis (in degrees). Default=None.
 
 # astro models
-time1 = np.linspace(0, 3*per, 1000) #Array of times at which to calculate the model.
+time1 = np.linspace(0, per, 1000) #Array of times at which to calculate the model.
 norm_flux = astro_models.ideal_lightcurve(time1, t0, per, rp, a, inc, ecosw, esinw, q1, q2, fp, A, B)
 
 # check if kelp_curve works, then combine it with eclipse and transit
 flux =  astro_models.kelp_curve(time1, t0, per, inc, rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = fp, t_secondary = 0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'Quadratic', name = 'WASP-76b',
-                                channel = f"IRAC {2}", n_periods = 3, hotspot_offset = 0.89, A_B = 0.2, c11 = 0.336)
+                                channel = f"IRAC {2}", n_periods = 1, hotspot_offset = 0.89, A_B = 0.2, c11 = 0.336)
 
-time = np.linspace(0, 3*per, len(flux))      #Re-define time to have the same length as flux due to np.concatenate
+time = np.linspace(0, per, len(flux))      #Re-define time to have the same length as flux due to np.concatenate
 transit, t_sec, anom = astro_models.transit_model(time, t0, per, rp, a, inc, ecc = 0, w = 51, u1 = 0.02, u2 = 0.098)
 eclip = astro_models.eclipse(time, t0, per, rp, a, inc, ecc = 0, w = 51, fp = 1.0, t_sec = t_sec)
 
 # kelp transit
 kelp = astro_models.kelp_transit(time1, t0, per, inc, rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = fp, t_secondary = 0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'Quadratic', name = 'WASP-76b',
-                                channel = f"IRAC {2}", n_periods = 5, hotspot_offset = 0.89, A_B = 0.2, c11 = 0.336)
+                                channel = f"IRAC {2}", n_periods = 1, hotspot_offset = np.radians(-3), A_B = 0.2, c11 = 0.336)
 
 plt.plot(time1, norm_flux, color = 'b', label = 'batman')
 #plt.plot(time, flux * (eclip - 1) + transit, color = 'r', label = 'added')

@@ -20,8 +20,8 @@ filt = Filter.from_name(f"IRAC {2}")
 filt.bin_down(bins = 10)
 C_ml = [[0], [0, c11, 0]]
 
-model = Model(hotspot_offset = offset, omega_drag = w_drag, alpha = alpha, C_ml = [[0], [0, c11, 0]], lmax = 1,
-              A_B = 0.0, planet = p, filt = filt)           # changed hotspot offset, C_ml and A_B (from 0-->0.2)
+model = Model(hotspot_offset = 0.89, omega_drag = w_drag, alpha = alpha, C_ml = [[0], [0, 0.336, 0]], lmax = 1,
+              A_B = 0.2, planet = p, filt = filt)           # changed hotspot offset, C_ml and A_B (from 0-->0.2)
                                                             #           Phase, Amplitude, Vertical Displacement
 
 angle = np.linspace(-np.pi, np.pi, 500)
@@ -29,7 +29,7 @@ pc = model.phase_curve(angle, omega = 0.0, g = 0.0)     # can't find omega, g (s
 flux1 = flux2 = pc[0].flux                              # show 2 full orbits' flux
 flux = np.concatenate([flux1, flux2])/1000000           # divide by 1000000 since flux is in ppm
 
-times = np.linspace(p.t0 - 0.7*p.per, p.t0 + 0.7*p.per, 1000)         # 2 full orbits
+times = np.linspace(0, 2*p.per, 1000)         # 2 full orbits
 transit, t_sec, anom = astro_models.transit_model(times, p.t0, p.per, p.rp, p.a, p.inc, p.ecc, p.w, 0.02, 0.098)
 eclip = astro_models.eclipse(times, p.t0, p.per, p.rp, p.a, p.inc, p.ecc, p.w, p.fp, t_sec = t_sec)
 flux = (flux * (eclip - 1)) + transit
@@ -41,7 +41,7 @@ norm_flux = astro_models.ideal_lightcurve(times, p.t0, p.per, p.rp, p.a, p.inc, 
 # Import and scatter Spitzer data
 with open('Bestfit_Poly5_v1_autoRun.pkl', 'rb') as f:
     data = pickle.load(f)
-real_time = data[1]    # I shifted the data points by 1 day to line up the transits
+real_time = data[1] - data[1][0] + 1  # I shifted the data points by 1 day to line up the transits
 real_flux = data[2]
 
 # Bin data by defining a fxn binValues (copied from notebook that was sent)
@@ -67,11 +67,11 @@ calibrated_binned, calibrated_binned_err = binValues(data[2] / data[4], data[1],
 
 plt.plot(times, norm_flux, color = 'k', label = 'batman')
 plt.plot(times, flux, color = 'g', label = 'kelp')
-# plt.plot((data[1] - data[1][0] + 1), data[3], color = 'y', label = 'Corrected Lightcurve from Spitzer')
+plt.plot((data[1] - data[1][0] + 1), data[3], color = 'y', label = 'Corrected Lightcurve from Spitzer')
 plt.xlabel('Time (days)')
 plt.ylabel('$F_p/F_s$')
-#plt.scatter(real_time, real_flux, s = 2, color = 'r', label = 'Spitzer, Raw Data')
-#plt.scatter(real_time[::29], calibrated_binned, s = 3, color = 'b', label = 'Spitzer, Calibrated + Binned Points')
+plt.scatter(real_time, real_flux, s = 2, color = 'r', label = 'Spitzer, Raw Data')
+plt.scatter(real_time[::29], calibrated_binned, s = 3, color = 'b', label = 'Spitzer, Calibrated + Binned Points')
 plt.axhline(y = 1, color = 'grey', ls = '--', alpha = 0.3)
 plt.legend()
 plt.show()

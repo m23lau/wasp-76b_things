@@ -67,7 +67,7 @@ calibrated_binned, calibrated_binned_err = binValues(data[2] / data[4], data[1],
 
 plt.plot(times, norm_flux, color = 'k', label = 'batman')
 plt.plot(times, flux, color = 'g', label = 'kelp')
-plt.plot((data[1] - data[1][0] + 1), data[3], color = 'y', label = 'Corrected Lightcurve from Spitzer')
+# plt.plot((data[1] - data[1][0] + 1), data[3], color = 'y', label = 'Corrected Lightcurve from Spitzer')
 plt.xlabel('Time (days)')
 plt.ylabel('$F_p/F_s$')
 plt.scatter(real_time, real_flux, s = 2, color = 'r', label = 'Spitzer, Raw Data')

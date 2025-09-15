@@ -87,51 +87,42 @@ def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a,
         new_time = np.linspace(time[0], time[-1], len(flux))
         return new_time, flux
 
-time = np.linspace(0, 2*per, 1000)
-flux = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11)
-plt.plot(flux[0], flux[1])
-plt.show()
 
+def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11):
+    """ Model phase variation sinusoid using kelp
+    time (ndarray): Number of times to calculate the model
+    t0 (float): Transit time
+    per (float): Orbital period, days
+    inc (float): Orbital inclination, deg
+    rp (float): Ratio of planet-to-star radius
+    ecc (float): Eccentricity
+    w (float): Argument of periastron, deg
+    a (float): Semimajor axis normalized by stellar radius
+    u (list): List of quadratic limb-darkening parameters
+    fp (float): Planetary flux out of eclipse
+    t_sec (float): Time of secondary eclipse
+    T_s (float): Temperature of host star, K
+    rp_a (float): Radius of planet over semimajor axis
+    limb_dark (str): Limb darkening law to use
+    name (str): Name of planet
+    channel (str): Name of filter
+    hotspot_offset (float): Angle of hotspot offset, rad
+    A_B (float): Bond albedo
+    c11 (float): First spherical harmonic term
+    Returns:
+        tuple: ndarra, ndarray
+        Times at which to calculate the model, observed flux from planet-star system over time
 
+    """
 
-# def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11):
-#     """ Model phase variation sinusoid using kelp
-#     time (ndarray): Number of times to calculate the model
-#     t0 (float): Transit time
-#     per (float): Orbital period, days
-#     inc (float): Orbital inclination, deg
-#     rp (float): Ratio of planet-to-star radius
-#     ecc (float): Eccentricity
-#     w (float): Argument of periastron, deg
-#     a (float): Semimajor axis normalized by stellar radius
-#     u (list): List of quadratic limb-darkening parameters
-#     fp (float): Planetary flux out of eclipse
-#     t_sec (float): Time of secondary eclipse
-#     T_s (float): Temperature of host star, K
-#     rp_a (float): Radius of planet over semimajor axis
-#     limb_dark (str): Limb darkening law to use
-#     name (str): Name of planet
-#     channel (str): Name of filter
-#     hotspot_offset (float): Angle of hotspot offset, rad
-#     A_B (float): Bond albedo
-#     c11 (float): First spherical harmonic term
-#     Returns:
-#         tuple: ndarra, ndarray
-#         Times at which to calculate the model, observed flux from planet-star system over time
-#
-#     """
-#
-#     flux = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
-#                                    channel, n_periods, hotspot_offset, A_B, c11)
-#
-#     time_new = np.linspace(time[0], time[-1], len(flux))  # Re-define time to have the same length as flux due to np.concatenate
-#
-#     u1 = 2 * np.sqrt(q[0]) * q[1]
-#     u2 = np.sqrt(q[0]) * (1 - 2 * q[1])
-#
-#     transit, t_sec, anom = transit_model(time_new, t0, per, rp, a, inc, ecc, w, u1, u2)
-#     eclip = eclipse(time_new, t0, per, rp, a, inc, ecc, w, fp = 1.0, t_sec = t_sec)
-#
-#     ff = flux * (eclip - 1) + transit
-#     return time_new, ff
-#
+    new_time, flux = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
+                                   channel, hotspot_offset, A_B, c11)
+
+    u1 = 2 * np.sqrt(q[0]) * q[1]
+    u2 = np.sqrt(q[0]) * (1 - 2 * q[1])
+
+    transit, t_sec, anom = transit_model(new_time, t0, per, rp, a, inc, ecc, w, u1, u2)
+    eclip = eclipse(new_time, t0, per, rp, a, inc, ecc, w, fp = 1.0, t_sec = t_sec)
+
+    ff = flux * (eclip - 1) + transit
+    return new_time, ff

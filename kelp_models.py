@@ -1,7 +1,9 @@
 from kelp import Filter, Planet, Model
 import matplotlib.pyplot as plt
 import numpy as np
-from astro_models import transit_model, eclipse
+from numpy.ma.core import less_equal
+from astro_models import transit_model, eclipse, phase_variation
+from scipy.interpolate import CubicSpline
 
 # Parameters
 t0   = 2458080.626165
@@ -12,7 +14,7 @@ inc  = 89.623
 ecc = 0
 w = 51
 q = [0.01, 0.01]
-fp   = 0.003687
+fp   = 1.0
 t_secondary = 0.0
 T_s = 6305.79
 rp_a = rp / a
@@ -20,11 +22,13 @@ limb_dark = 'Quadratic'
 name = 'WASP-76b'
 channel = f"IRAC {2}"
 hotspot_offset = np.radians(-3)
+phase_shift = 0.0
 A_B = 0.0
 c11 = 0.18
 
+
 def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11):
-    """ Model phase variation sinusoid using kelp
+    """ Model a phase variation sinusoid (only one period) using kelp
     time (ndarray): Number of times to calculate the model
     t0 (float): Transit time
     per (float): Orbital period, days
@@ -53,42 +57,54 @@ def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a,
     filt = Filter.from_name(channel)
     filt.bin_down(bins=10)
 
-    offset = -0.05236  # converted from -3 degrees E from "A Comprehensive Analysis of Spitzer 4.5 μm..."
-    alpha = 0.6
+    alph = 0.6
     w_drag = 4.5
-    c11 = 0.18         # alpha, omega_drag parameters are same as sample on the documentation
 
     # Create model
-    model = Model(hotspot_offset = hotspot_offset, omega_drag = 4.5, alpha = 0.6, C_ml=[[0], [0, c11, 0]],
+    model = Model(hotspot_offset = hotspot_offset, omega_drag = w_drag, alpha = alph, C_ml=[[0], [0, c11, 0]],
                   lmax = 1, A_B = A_B, planet = p, filt = filt)
 
-    # Get phase variations for n periods
+    # Get phase variations
     angle = np.linspace(-np.pi, np.pi, len(time))
     pc = model.phase_curve(angle, omega = 0.0, g = 0.0)
     flux = pc[0].flux / 1e6
 
-    n_periods = (time[-1] - time[0]) / per
-    full_pd = int(n_periods)
-    frac_pd = n_periods - full_pd
-
-    for i in range(full_pd - 1):
-        ff = pc[0].flux / 1e6
-        flux = np.concatenate([ff, flux])
-
-    if frac_pd != 0:
-        extra_len = round(frac_pd * len(time))
-        extra_angle = np.linspace(angle[0], angle[extra_len], extra_len)
-        extra_flux = model.phase_curve(extra_angle, omega = 0.0, g = 0.0)[0].flux / 1e6
-        flux = np.concatenate([flux, extra_flux])
-        new_time = np.linspace(time[0], time[-1], len(flux))
-        return new_time, flux
-
-    else:
-        new_time = np.linspace(time[0], time[-1], len(flux))
-        return new_time, flux
+    return flux
 
 
-def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11):
+def shitter(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, phase_shift, A_B, c11):
+    """Apply a phase shift to a kelp sinusoid and display it for an arbitrary amount of time
+    time (ndarray): Number of times at which to calculate the model
+    t0 (float): Transit time
+    per (float): Orbital period, days
+    inc (float): Orbital inclination, deg
+    rp (float): Ratio of planet-to-star radius
+    ecc (float): Eccentricity
+    w (float): Argument of periastron, deg
+    a (float): Semimajor axis normalized by stellar radius
+    u (list): List of quadratic limb-darkening parameters
+    fp (float): Planetary flux out of eclipse
+    t_sec (float): Time of secondary eclipse
+    T_s (float): Temperature of host star, K
+    rp_a (float): Radius of planet over semimajor axis
+    limb_dark (str): Limb darkening law to use
+    name (str): Name of planet
+    channel (str): Name of filter
+    hotspot_offset (float): Angle of hotspot offset, rad
+    phase_shift (float): Arbitrary phase shift of sinusoid, rad
+    A_B (float): Bond albedo
+    c11 (float): First spherical harmonic term
+    Returns:
+        tuple: ndarray, ndarray
+        Times at which to calculate the model, phase variations from planet-star system over time
+
+    """
+    flux_1 = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11)
+    # shift first by using phase_shift, then define n periods to apply np tile and lastly define new_time, flux
+    return None
+
+
+def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, phase_shift, A_B, c11):
     """ Model phase variation sinusoid using kelp
     time (ndarray): Number of times to calculate the model
     t0 (float): Transit time
@@ -107,22 +123,23 @@ def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_
     name (str): Name of planet
     channel (str): Name of filter
     hotspot_offset (float): Angle of hotspot offset, rad
+    phase_shift (float): Arbitrary phase shift of sinusoid, rad
     A_B (float): Bond albedo
     c11 (float): First spherical harmonic term
     Returns:
-        tuple: ndarra, ndarray
+        tuple: ndarray, ndarray
         Times at which to calculate the model, observed flux from planet-star system over time
 
     """
 
-    new_time, flux = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
-                                   channel, hotspot_offset, A_B, c11)
+    new_time, flux = shitter(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
+                                   channel, hotspot_offset, phase_shift, A_B, c11)
 
     u1 = 2 * np.sqrt(q[0]) * q[1]
     u2 = np.sqrt(q[0]) * (1 - 2 * q[1])
 
     transit, t_sec, anom = transit_model(new_time, t0, per, rp, a, inc, ecc, w, u1, u2)
-    eclip = eclipse(new_time, t0, per, rp, a, inc, ecc, w, fp = 1.0, t_sec = t_sec)
+    eclip = eclipse(new_time, t0, per, rp, a, inc, ecc, w, fp = fp, t_sec = t_sec)
 
     ff = flux * (eclip - 1) + transit
     return new_time, ff

@@ -5,28 +5,6 @@ from numpy.ma.core import less_equal
 from astro_models import transit_model, eclipse, phase_variation
 from scipy.interpolate import CubicSpline
 
-# Parameters
-t0   = 2458080.626165
-per  = 1.80988198
-rp   = 0.10852
-a    = 4.08
-inc  = 89.623
-ecc = 0
-w = 51
-q = [0.01, 0.01]
-fp   = 1.0
-t_secondary = 0.0
-T_s = 6305.79
-rp_a = rp / a
-limb_dark = 'Quadratic'
-name = 'WASP-76b'
-channel = f"IRAC {2}"
-hotspot_offset = np.radians(-3)
-phase_shift = 0.0
-A_B = 0.0
-c11 = 0.18
-
-
 def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11):
     """ Model a phase variation sinusoid (only one period) using kelp
     time (ndarray): Number of times to calculate the model

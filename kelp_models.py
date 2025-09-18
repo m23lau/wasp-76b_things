@@ -72,7 +72,7 @@ def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a,
     return flux
 
 
-def shitter(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, phase_shift, A_B, c11):
+def phase_offset(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, phase_shift, A_B, c11):
     """Apply a phase shift to a kelp sinusoid and display it for an arbitrary amount of time
     time (ndarray): Number of times at which to calculate the model
     t0 (float): Transit time
@@ -99,9 +99,18 @@ def shitter(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, li
         Times at which to calculate the model, phase variations from planet-star system over time
 
     """
-    flux_1 = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11)
-    # shift first by using phase_shift, then define n periods to apply np tile and lastly define new_time, flux
-    return None
+    # Define time and flux for one period
+    flux_1p = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11)
+    time_1p = np.linspace(0, per, len(flux_1p))
+
+    # Shift values by phase_shift, then tile them for n periods
+    t_shifted = (time_1p + phase_shift) % per
+    f_interp = np.interp(t_shifted, time_1p, flux_1p)
+
+    n_periods = int((time[-1] - time[0]) / per)
+    f_new = np.tile(f_interp, n_periods)
+    t_new = np.linspace(time[0], time[-1], len(f_new))
+    return t_new, f_new
 
 
 def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name, channel, hotspot_offset, phase_shift, A_B, c11):
@@ -132,7 +141,7 @@ def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_
 
     """
 
-    new_time, flux = shitter(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
+    new_time, flux = phase_offset(time, t0, per, inc, rp, ecc, w, a, q, fp, t_secondary, T_s, rp_a, limb_dark, name,
                                    channel, hotspot_offset, phase_shift, A_B, c11)
 
     u1 = 2 * np.sqrt(q[0]) * q[1]

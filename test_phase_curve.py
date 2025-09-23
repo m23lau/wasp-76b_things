@@ -21,23 +21,38 @@ D    = 0.0           #(optional): Amplitude of the second-order sine term. Defau
 r2   = None          #(optional): Planet radius along sub-stellar axis (in units of stellar radii). Default=None.
 r2off= None          #(optional): Angle to the elongated axis with respect to the sub-stellar axis (in degrees). Default=None.
 
+
 # astro models
-time1 = np.linspace(t0, t0 + 3*per, 10000) #Array of times at which to calculate the model.
-norm_flux = astro_models.ideal_lightcurve(time1, t0, per, rp, a, inc, ecosw, esinw, q1, q2, fp, A, B)
+#time1 = np.linspace(t0 - 0.7*per, t0 + 0.7*per, 10000) #Array of times at which to calculate the model.
+#norm_flux = astro_models.ideal_lightcurve(time1, t0, per, rp, a, inc, ecosw, esinw, q1, q2, fp, A, B)
 
+# Data
+import pickle
 
-# kelp phase curve + transit
-phase_shift = np.radians(17)
+with open('Bestfit_Poly5_v1_autoRun.pkl', 'rb') as f:
+    data = pickle.load(f)
 
-# kelpc = kelp_models.kelp_curve(time1, t0, per, inc, rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
-#                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b',
-#                                 channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = phase_shift, A_B = 0.2, c11 = 0.336)
-kelpt = kelp_models.kelp_transit(time1, t0, per, inc, rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
+time = data[1]
+flux = data[2] / data[4]
+plt.scatter(time, flux, color = 'r', s = 2, label = 'data')
+
+# kelp phase curve
+phase_shift = np.radians(42)
+
+kelpt = kelp_models.kelp_transit(time, t0 = 57859.2985794537, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b',
-                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = phase_shift, A_B = 0.2, c11 = 0.336)
+                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = phase_shift, A_B = 0.2, c11 = 0.19)
 
-plt.plot(time1, norm_flux, color = 'k', label = 'batman')
-# plt.plot(kelpc[0], kelpc[1]+1, color = 'g', label = 'kelp curve +1')
-plt.plot(kelpt[0], kelpt[1], color = 'b', label = 'kelp transit')
+#plt.plot(time1, norm_flux, color = 'k', label = 'batman')
+plt.plot(kelpt[0], kelpt[1], color = 'g', label = 'kelp transit')
+
 plt.legend()
+plt.show()
+
+# Residuals + Bin data for comparison
+from kelp_models import bin
+calibrated_binned = bin(kelpt[0], kelpt[1], len(time)+1)
+tt = np.linspace(kelpt[0][0], kelpt[0][-1], len(time))
+diff = flux - calibrated_binned
+plt.scatter(tt, diff, s = 2)
 plt.show()

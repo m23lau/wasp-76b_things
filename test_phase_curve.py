@@ -32,16 +32,14 @@ import pickle
 with open('Bestfit_Poly5_v1_autoRun.pkl', 'rb') as f:
     data = pickle.load(f)
 
-time = data[1]
-flux = data[2] / data[4]
-plt.scatter(time, flux, color = 'r', s = 2, label = 'data')
+real_time = data[1]
+real_flux = data[2] / data[4]
+plt.scatter(real_time, real_flux, color = 'r', s = 2, label = 'data')
 
 # kelp phase curve
-phase_shift = np.radians(42)
-
-kelpt = kelp_models.kelp_transit(time, t0 = 57859.2985794537, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
+kelpt = kelp_models.kelp_transit(real_time, t0 = 56107.3541, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b',
-                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = phase_shift, A_B = 0.2, c11 = 0.19)
+                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = 0.6731, A_B = 0.2022, c11 = 0.2465)
 
 #plt.plot(time1, norm_flux, color = 'k', label = 'batman')
 plt.plot(kelpt[0], kelpt[1], color = 'g', label = 'kelp transit')
@@ -51,8 +49,8 @@ plt.show()
 
 # Residuals + Bin data for comparison
 from kelp_models import bin
-calibrated_binned = bin(kelpt[0], kelpt[1], len(time)+1)
-tt = np.linspace(kelpt[0][0], kelpt[0][-1], len(time))
-diff = flux - calibrated_binned
+calibrated_binned = bin(kelpt[0], kelpt[1], len(real_time)+1)
+tt = np.linspace(kelpt[0][0], kelpt[0][-1], len(real_time))
+diff = real_flux - calibrated_binned
 plt.scatter(tt, diff, s = 2)
 plt.show()

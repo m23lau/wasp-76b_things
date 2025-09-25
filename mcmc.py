@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import kelp_models
 from scipy.optimize import minimize
 from emcee import EnsembleSampler
-# from multiprocessing import Pool
 from corner import corner
 import pickle
 from tqdm import tqdm
@@ -27,7 +26,7 @@ def pc_model(params, t):
          ndarray: Observed flux from planet-star system
     """
     p_s, b_alb, c_11 = params
-    new_t, flux = kelp_models.kelp_transit(t, t0 = 57859.2985794537, per = 1.80988190, inc = 89.623, rp = 0.10852, ecc = 0,
+    new_t, flux = kelp_models.kelp_transit(t, t0 = 56107.3541, per = 1.80988190, inc = 89.623, rp = 0.10852, ecc = 0,
                                     w = 51, a = 4.08, q = [0.01, 0.01], fp = 1.0, t_secondary = 0, T_s = 6305.79,
                                     rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b', channel = f"IRAC {2}",
                                     hotspot_offset = np.radians(-3), phase_shift = p_s, A_B = b_alb, c11 = c_11)
@@ -92,12 +91,54 @@ soln = minimize(lambda p, t, f, ferr: -log_prob(p, t, f, ferr), init_p, args=(ti
 n_params = 3
 n_walkers = 2 * n_params
 p0 = [soln.x + 0.1 * np.random.randn(n_params) for i in range(n_walkers)]
-
 sampler = EnsembleSampler(n_walkers, n_params, log_prob, args = (time, flux, ferr))
 
-p1 = sampler.run_mcmc(p0, 100, progress = True)
+n_burn, n_steps = 100, 1000
+p1 = sampler.run_mcmc(p0, n_burn, progress = True)      # Burn-in
 sampler.reset()
-sampler.run_mcmc(p1, 500, progress = True)
+sampler.run_mcmc(p1, n_steps, progress = True)          # Actual simulation
 
+chain = sampler.get_chain()
+print(chain[-1])            # Print last step of each walker
+
+
+# See if walkers converge
+shift_guesses = np.zeros((n_walkers, n_steps), float)       # These are 2D arrays with n_walkers rows
+alb_guesses = np.zeros((n_walkers, n_steps), float)         # and n_steps columns for each paraneter
+c_guesses = np.zeros((n_walkers, n_steps), float)
+
+for i in range(n_walkers):
+    for j in range(n_steps):
+        shift_guesses[i][j] = chain[j][i][0]
+        alb_guesses[i][j] = chain[j][i][1]
+        c_guesses[i][j] = chain[j][i][2]
+
+for i in range(n_walkers):
+    print(shift_guesses[i][-1])
+print()
+for i in range(n_walkers):
+    print(alb_guesses[i][-1])
+print()
+for i in range(n_walkers):
+    print(c_guesses[i][-1])
+
+
+# Make 3 subplots, one for each parameter
+xs = np.arange(0, n_steps)
+fig, axs = plt.subplots(3)
+fig.suptitle('Convergence of Walkers')
+for i in range(6):
+    axs[0].plot(xs, shift_guesses[i])
+    axs[1].plot(xs, alb_guesses[i])
+    axs[2].plot(xs, c_guesses[i])
+
+axs[0].set_ylabel(r'$\Delta \phi$')
+axs[1].set_ylabel(r'$A_B$')
+axs[2].set_ylabel(r'$C_{11}$')
+axs[2].set_xlabel('Step Number')
+plt.show()
+
+
+# Show corner plot
 corner(sampler.flatchain, truths = None, labels = [r'$\Delta \phi$', r'$A_B$', r'$C_{11}$'])
 plt.show()

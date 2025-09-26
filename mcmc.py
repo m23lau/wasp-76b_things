@@ -7,7 +7,7 @@ from corner import corner
 import pickle
 from tqdm import tqdm
 
-# # Scatter data points
+# Scatter data points
 with open('Bestfit_Poly5_v1_autoRun.pkl', 'rb') as f:
     data = pickle.load(f)
 time = data[1]

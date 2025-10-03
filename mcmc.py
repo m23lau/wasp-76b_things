@@ -95,110 +95,40 @@ n_walkers = 2 * n_params
 p0 = [soln.x + 0.01 * np.random.randn(n_params) for i in range(n_walkers)]
 sampler = EnsembleSampler(n_walkers, n_params, log_prob, args = (time, flux, ferr))
 
-n_burn, n_steps = 100, 1500
+n_burn, n_steps = 5, 10
 p1 = sampler.run_mcmc(p0, n_burn, progress = True)      # Burn-in
 sampler.reset()
 sampler.run_mcmc(p1, n_steps, progress = True)          # Actual simulation
 
 chain = sampler.get_chain()
-# print(chain[-1])            # Print last step of each walker
-
-
-# See if walkers converge
-transit_guesses = np.zeros((n_walkers, n_steps), float)     # These are 2D arrays with n_walkers rows
-period_guesses = np.zeros((n_walkers, n_steps), float)      # and n_steps columns for each paraneter
-incline_guesses = np.zeros((n_walkers, n_steps), float)
-radius_guesses = np.zeros((n_walkers, n_steps), float)
-semiaxis_guesses = np.zeros((n_walkers, n_steps), float)
-q1_guesses = np.zeros((n_walkers, n_steps), float)
-q2_guesses = np.zeros((n_walkers, n_steps), float)
-offset_guesses = np.zeros((n_walkers, n_steps), float)
-shift_guesses = np.zeros((n_walkers, n_steps), float)
-alb_guesses = np.zeros((n_walkers, n_steps), float)
-c_guesses = np.zeros((n_walkers, n_steps), float)
-
-for i in range(n_walkers):
-    for j in range(n_steps):
-        transit_guesses[i][j] = chain[j][i][0]
-        period_guesses[i][j] = chain[j][i][1]
-        incline_guesses[i][j] = chain[j][i][2]
-        radius_guesses[i][j] = chain[j][i][3]
-        semiaxis_guesses[i][j] = chain[j][i][4]
-        q1_guesses[i][j] = chain[j][i][5]
-        q2_guesses[i][j] = chain[j][i][6]
-        offset_guesses[i][j] = chain[j][i][7]
-        shift_guesses[i][j] = chain[j][i][8]
-        alb_guesses[i][j] = chain[j][i][9]
-        c_guesses[i][j] = chain[j][i][10]
+guesses = chain.transpose(2, 1, 0)
 
 # Make n subplots, one for each parameter
 xs = np.arange(0, n_steps)
 fig, axs = plt.subplots(n_params)
 fig.suptitle('Convergence of Walkers')
-for i in range(6):
-    axs[0].plot(xs, transit_guesses[i])
-    axs[1].plot(xs, period_guesses[i])
-    axs[2].plot(xs, incline_guesses[i])
-    axs[3].plot(xs, radius_guesses[i])
-    axs[4].plot(xs, semiaxis_guesses[i])
-    axs[5].plot(xs, q1_guesses[i])
-    axs[6].plot(xs, q2_guesses[i])
-    axs[7].plot(xs, offset_guesses[i])
-    axs[8].plot(xs, shift_guesses[i])
-    axs[9].plot(xs, alb_guesses[i])
-    axs[10].plot(xs, c_guesses[i])
+for i in range(n_walkers):
+    for j in range(n_params):
+        axs[j].plot(xs, guesses[j][i])
 
-axs[0].set_ylabel(r'$t_0$')
-axs[1].set_ylabel('Per')
-axs[2].set_ylabel('Inc')
-axs[3].set_ylabel(r'$r_p$')
-axs[4].set_ylabel('a')
-axs[5].set_ylabel('q1')
-axs[6].set_ylabel('q2')
-axs[7].set_ylabel(r'$\Delta \phi$')
-axs[8].set_ylabel(r'$\Delta \phi$')
-axs[9].set_ylabel(r'$A_B$')
-axs[10].set_ylabel(r'$C_{11}$')
+p_labels = [r'$t_0', 'Per', 'Inc', r'$r_p', 'a', 'q1', 'q2',
+                                                  r'$\Delta \phi$', r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
+# guesses[i] corresponds to the ith parameter in the list above
+
+for k in range(n_params):
+    axs[k].set_ylabel(p_labels[k])
+
 axs[10].set_xlabel('Step Number')
 plt.show()
 
 
 # Show corner plot
-# corner(sampler.flatchain, truths = None, labels = [r'$t_0', 'Per', 'Inc', r'$r_p', 'a', 'q1', 'q2',
-#                                                   r'$\Delta \phi$', r'$\Delta \phi$', r'$A_B$', r'$C_{11}$'])
-# plt.show()
+corner(sampler.flatchain, truths = None, labels = p_labels)
+plt.show()
 
 
 # Print each walker's last step
-for i in range(n_walkers):
-    print(transit_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(period_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(incline_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(radius_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(semiaxis_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(q1_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(q2_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(offset_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(shift_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(alb_guesses[i][-1])
-print()
-for i in range(n_walkers):
-    print(c_guesses[i][-1])
+for i in range(n_params):
+    for j in range(n_walkers):
+        print(guesses[i][j][-1])
+    print()

@@ -34,12 +34,12 @@ with open('Bestfit_Poly5_v1_autoRun.pkl', 'rb') as f:
 
 real_time = data[1]
 real_flux = data[2] / data[4]
-plt.scatter(real_time, real_flux, color = 'r', s = 2, label = 'data')
+plt.scatter(real_time, real_flux, color = 'r', s = 2, label = 'data', alpha = 0.3)
 
 # kelp phase curve
-kelpt = kelp_models.kelp_transit(real_time, t0 = 56107.3541, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0, t_secondary = 0,
+kelpt = kelp_models.kelp_transit(real_time, t0 = 57859.3174, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b',
-                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), phase_shift = 0.6731, A_B = 0.2022, c11 = 0.2465)
+                                channel = f"IRAC {2}", hotspot_offset = np.radians(-3), A_B = 0.2022, c11 = 0.2465)
 
 #plt.plot(time1, norm_flux, color = 'k', label = 'batman')
 plt.plot(kelpt[0], kelpt[1], color = 'g', label = 'kelp transit')
@@ -47,7 +47,7 @@ plt.plot(kelpt[0], kelpt[1], color = 'g', label = 'kelp transit')
 plt.legend()
 plt.show()
 
-# Residuals + Bin data for comparison
+# # Residuals + Bin data for comparison
 from kelp_models import bin
 calibrated_binned = bin(kelpt[0], kelpt[1], len(real_time)+1)
 tt = np.linspace(kelpt[0][0], kelpt[0][-1], len(real_time))

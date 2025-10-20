@@ -38,11 +38,10 @@ def run_sims(n_dim, init, x, y, yerr, n_burn, n_steps, n_runs, labels):
         n_runs (int): Number of times to run MCMC
         labels (list: str): List of labels for corner plot
     Returns:
-         (______what does it return idk yet_____)
+         tuple: ndarray, ndarray, ndarray
+         last steps of each run, guesses for the last run, flatchain used in corner plot
     """
     last_steps = []
-    gs = []         # Guesses for convergence plots
-    fcs = []        # Flatchains for corner plot
 
     n_walkers = 2 * n_dim
     p0 = [init + 0.01 * np.random.randn(n_dim) for _ in range(n_walkers)]
@@ -54,21 +53,22 @@ def run_sims(n_dim, init, x, y, yerr, n_burn, n_steps, n_runs, labels):
         sampler.run_mcmc(p1, n_steps, progress = True)          # Actual simulation
 
         chain = sampler.get_chain()
-        gs.append(chain.transpose(2, 1, 0))     # Transpose the chain so that each guesses[i] shows each parameter and each
-                                                # walker's steps in a row
-        fcs.append(sampler.flatchain)
+
 
         # Set up next run with last step of previous run
         new_init = np.average(chain[-1], axis=0)
         last_steps.append(new_init)
         p0 = [new_init + 0.01 * np.random.randn(n_dim) for _ in range(n_walkers)]
 
-    gs = np.concatenate(np.array(gs), axis = 1)
-    # # Make n subplots, one for each parameter, to see if they converge
+    last_chain = sampler.get_chain()
+    gs = last_chain.transpose(2, 1, 0)           # Transpose the chain so that each guesses[i] shows each parameter and each
+                                                 # walker's steps in a row
+
+    # Make n subplots, one for each parameter, to see if they converge
     xs = np.arange(0, n_steps)
     fig, axs = plt.subplots(n_dim)
     fig.suptitle('Convergence of Walkers')
-    for i in range(n_runs*n_walkers):
+    for i in range(n_walkers):
         for j in range(n_dim):
             axs[j].plot(xs, gs[j][i])
 
@@ -78,11 +78,13 @@ def run_sims(n_dim, init, x, y, yerr, n_burn, n_steps, n_runs, labels):
     axs[-1].set_xlabel('Step Number')
     plt.show()
 
-    # Show corner plot with all runs
-    fcs = np.reshape(np.array(fcs), (n_runs * n_steps * n_walkers, n_dim))
-    corner(fcs, truths=None, labels=labels)
+    # Show corner plot with the last run
+    last20_pct = int(n_steps * 0.8)
+    fc = last_chain[last20_pct:]
+    fc = np.reshape(fc, (len(fc)*n_walkers, n_dim))
+    corner(fc, truths=None, labels=labels)
     plt.show()
 
-    return np.array(last_steps), gs, fcs
+    return np.array(last_steps), gs, fc
 
-test1, test2, test3 = run_sims(10, init_p, time, flux, ferr, 1, 10, 3, p_labels)
+test1, test2, test3 = run_sims(10, init_p, time, flux, ferr, 100, 100, 1, p_labels)

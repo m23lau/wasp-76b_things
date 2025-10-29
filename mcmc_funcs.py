@@ -28,14 +28,15 @@ def log_prior(params):
     """
     ttr, pd, incl, rad_p, semi_a, q1, q2, h_off, b_alb, c_11 = params
 
-    if (57859. < ttr < 57860. and 0.00 < q1 < 0.02 and 0.00 < q2 < 0.02
+    if (0.00 < q1 < 0.02 and 0.00 < q2 < 0.02
             and 0.10 < b_alb < 0.50 and 0.20 < c_11 < 0.50):
+        prior_t0 = -0.5 * ((ttr - 56107.35411862118) / 0.000293793706)**2
         prior_per = -0.5 * ((pd - 1.80988198) / 0.00000064)**2
         prior_inc = -0.5 * ((incl - 89.623) / 0.034)**2
         prior_rad = -0.5 * ((rad_p - 0.10852) / 0.00096)**2
         prior_a = -0.5 * ((semi_a - 4.08) / 0.06)**2
         prior_offset = -0.5 * ((h_off - np.radians(-3)) / np.radians(10))**2
-        return prior_per + prior_inc + prior_rad + prior_a + prior_offset
+        return prior_t0 + prior_per + prior_inc + prior_rad + prior_a + prior_offset
 
     else:
         return -np.inf

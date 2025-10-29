@@ -30,7 +30,8 @@ def kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark, n
     """
     # Create kelp.Planet object and filter
     p = Planet(per, t0, inc, rp, ecc, w, a, q, fp, t0 - 0.5*per, T_s, rp_a, limb_dark, name)    # Time of secondary eclipse is
-    filt = Filter.from_name(channel)                                                            # half a period from transit
+                                                                                                # half a period from transit
+    filt = Filter.from_name(channel)
     filt.bin_down(bins=10)
 
     alph = 0.6

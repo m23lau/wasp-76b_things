@@ -126,14 +126,17 @@ def log_prob(params, t, f, ferr):
         return -np.inf
 
 
-def corner_plot(flatchain, labels):
+def corner_plot(flatchain, labels, title):
     """ Scans for and takes out stray walkers, then plots a corner plot
     Args:
         flatchain (ndarray): 1D or 2D array that feeds into corner plot
         labels (list: str): List of labels for plot
+        title (str or float): Word or number to be included in plot title
     Returns:
          ndarray: Modified flatchain
     """
+    if type(title) == np.float64:
+        title = round(title, 3)
 
     rd = []             # Rounded values
     truths = []         # Modal values for each parameter
@@ -163,6 +166,7 @@ def corner_plot(flatchain, labels):
 
     # Plot corner plot before removing strays
     corner(flatchain, truths=truths, labels=labels)
+    plt.savefig(str(title)+'_corner.pdf')
     plt.show()
 
     # # Plot corner plot after removing strays, plus print out the lengths of each array that corner.corner takes

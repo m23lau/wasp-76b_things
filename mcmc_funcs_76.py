@@ -96,7 +96,7 @@ def corner_plot(flatchain, labels):
     for i in rd:
         truths.append(mode(i))
 
-    # Plot corner plot before removing strays
+    # Corner plot
     corner(flatchain, truths=truths, labels=labels)
     plt.show()
 

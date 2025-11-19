@@ -15,12 +15,11 @@ def pc_model(params, t):
          ndarray: Observed flux from planet-star system
     """
 
-    h_off, b_alb, c_11 = params
-    # change transit time according to data
-    new_t, flux = kelp_models.kelp_transit(t, t0 = 57859.3174, per = 1.27492504, inc = 88.49, rp = 0.12355, ecc = 0,
-                                    w = 10, a = 3.8131, q = [0.01, 0.01], fp = 1.0, T_s = 6776.00,
-                                    rp_a = 0.12355 / 3.8131, limb_dark = 'quadratic', name = 'WASP-76b', channel = 'NIRISS GR700XD',
-                                    hotspot_offset = h_off, A_B = b_alb, c11 = c_11)
+    rad_p, fpl, h_off, alb, c_11 = params
+    new_t, flux = kelp_models.kelp_transit(t, t0 = 60244.520345, per = 1.27492504, inc = 88.345, rp = rad_p, ecc = 0,
+                                    w = 10, a = 3.8002, q = [0.1, 0.1], fp = fpl, T_s = 6776.00,
+                                    rp_a = rad_p / 3.8131, limb_dark = 'quadratic', name = 'WASP-76b', channel = 'NIRISS SOSS Order 1',
+                                    hotspot_offset = h_off, A_B = alb, c11 = c_11)
 
     f_binned = kelp_models.bin(new_t, flux, len(t) + 1)
     return f_binned
@@ -34,9 +33,9 @@ def log_prior(params):
         -infinity or 0
     """
 
-    h_off, b_alb, c_11 = params
-
-    if (-np.pi < h_off < np.pi and 0.00 < b_alb < 1.00 and 0.00 < c_11 < 1.00):
+    rad_p, fpl, h_off, alb, c_11 = params
+    if (0.0 < rad_p < 1.0 and 0.0 < fpl < 1.0 and -np.pi < h_off < np.pi and -1.0 < alb < 1.0
+            and 0.0 < c_11 < 1.0):
         return 0
 
     else:
@@ -96,7 +95,7 @@ def corner_plot(flatchain, labels):
     for i in rd:
         truths.append(mode(i))
 
-    # Plot corner plot before removing strays
+    # Corner plot
     corner(flatchain, truths=truths, labels=labels)
     plt.show()
 

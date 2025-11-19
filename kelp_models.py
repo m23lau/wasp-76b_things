@@ -80,8 +80,8 @@ def phase_offset(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark,
 
     # Shift values by checking phase of planet at time[0], then interpolate & move the curve back to original spot
     t_sec = t0 - 0.5*per
-    start_phase = (t_sec - time[0]) / per                   # Check how far planet is from an eclipse
-    start_loc = int(len(time)/2 - start_phase*len(time))    # Gives start location of new phase curve on the kelp curve
+    start_phase = np.abs(t_sec - time[0]) / per                         # Check how far planet is from an eclipse
+    start_loc = int(len(time)/2 - start_phase*len(time))                # Gives start location of new phase curve on the kelp curve
     f_shifted = np.concatenate([flux_1p[start_loc:], flux_1p[:start_loc]])
 
     # Define the curve for multiple periods

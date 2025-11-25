@@ -150,27 +150,11 @@ def corner_plot(flatchain, labels, title):
     for i in rd:
         truths.append(mode(i))
 
-    # go_away = []
-    # # for i in range(len(flatchain)):
-    # #     for j in range(len(truths)):
-    # #         if not math.isclose(flatchain[i][j], truths[j], rel_tol=1e-3):
-    # #             go_away.append(i)
-    #
-    # for i in range(len(flatchain)):
-    #     if not math.isclose(flatchain[i][0], truths[0], rel_tol=5e-12):
-    #         go_away.append(i)
-    #
-    # newfc = np.delete(flatchain, go_away, axis=0)
-    # print(len(flatchain), len(newfc))
-    # print(truths)
-
-    # Plot corner plot before removing strays
-    corner(flatchain, truths=truths, labels=labels)
+    # Plot corner plot
+    corner(flatchain, truths=truths, labels=labels, quantiles=[0.16, 0.5, 0.84],
+                    show_titles=True, plot_datapoints=False)
     plt.savefig(str(title)+'_corner.pdf')
-    plt.show()
-
-    # # Plot corner plot after removing strays, plus print out the lengths of each array that corner.corner takes
-    # corner(newfc, truths=truths, labels=labels)
-    # plt.show()
+    plt.close()
 
     return None
+

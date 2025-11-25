@@ -34,8 +34,8 @@ def log_prior(params):
     """
 
     rad_p, fpl, h_off, alb, c_11 = params
-    if (0.0 < rad_p < 1.0 and 0.0 < fpl < 1.0 and -np.pi < h_off < np.pi and -1.0 < alb < 1.0
-            and 0.0 < c_11 < 1.0):
+    if (0.0 < rad_p < 1.0 and 0.0 < fpl < 1.0 and -np.pi < h_off < np.pi and
+            -1.0 < alb < 1.0 and 0.0 < c_11 < 1.0):
         return 0
 
     else:
@@ -96,7 +96,8 @@ def corner_plot(flatchain, labels):
         truths.append(mode(i))
 
     # Corner plot
-    corner(flatchain, truths=truths, labels=labels)
+    corner(flatchain, truths=truths, labels=labels, quantiles=[0.16, 0.5, 0.84],
+                    show_titles=True, plot_datapoints=False)
     plt.show()
 
     return None

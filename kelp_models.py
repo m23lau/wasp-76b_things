@@ -155,3 +155,79 @@ def bin(x, y, nbins):
     binned = np.array([np.nanmedian(y[digitized == i]) for i in range(1, nbins)])
 
     return binned
+
+
+def big_fig(x, y, yerr, model, best_fitp, median_sigmap, title):
+    """ Plot phase curves and residuals
+    Args:
+        x (ndarray): x values of data points
+        y (ndarray): y values of data points
+        yerr (ndarray): Uncertainty in y values of data points
+        model (callable): Phase curve model to use
+        best_fitp: Best fit parameters
+        median_sigmap(ndarray): ndim x 3 array containing fit params for +/-1 sigma and median
+        title (str or float): Word or number to be included in plot title
+    Returns:
+        ndarray: y values for best fit curve
+    """
+    if type(title) == np.float64:
+        title = round(title, 3)
+
+    y_fit = model(best_fitp, x)     # Best fit phase curve based on max log likelihood
+    msigma = model(median_sigmap[0], x)    # -1 sigma
+    med_fit = model(median_sigmap[1], x)   # 50th percentile fit
+    psigma = model(median_sigmap[2], x)    # +1 sigma
+
+    bin_x = np.linspace(x[0], x[-1], 50)
+    bin_y = bin(x, y, 51)
+    bin_yerr = bin(x, yerr, 51)
+
+    fig = plt.figure()
+    fig.suptitle(str(title)+ r'$\mu$' 'm Phase Curve + Residuals')
+    grid = fig.add_gridspec(3, 2, hspace=0.0, wspace=0.0, width_ratios=[4, 1], height_ratios=[1, 1, 1])
+
+    # Zoomed out phase curve
+    ax1 = fig.add_subplot(grid[0, 0])
+    ax1.scatter(x, y, color = 'r' , s = 1, alpha = 0.3, label = 'Raw Data')
+    ax1.errorbar(bin_x, bin_y, yerr=bin_yerr, fmt = '.k',  label = 'Binned Data')
+    ax1.plot(x, y_fit, color='k', label = 'Best Fit', lw = 1)
+    ax1.plot(x, med_fit, color='y', label = 'Median Fit', lw = 1)
+    ax1.plot(x, msigma, color='b', label = r'$-\sigma$', lw = 1, alpha=0.5)
+    ax1.plot(x, psigma, color='g', label = r'$+\sigma$', lw = 1, alpha=0.5)
+
+    ax1.set_ylabel('Normalized Flux')
+    ax1.legend(fontsize='x-small', loc=4)
+
+    # Zoomed in phase curve
+    ax2 = fig.add_subplot(grid[1, 0], sharex=ax1)
+    ax2.scatter(x, y, color='r', s=1, alpha=0.3, label='Raw Data')
+    ax2.errorbar(bin_x, bin_y, yerr=bin_yerr, fmt='.k', label='Binned Data')
+    ax2.plot(x, y_fit, color='k', label='Best Fit', lw = 1)
+    ax2.plot(x, med_fit, color='y', label = 'Median Fit', lw = 1)
+    ax2.plot(x, msigma, color='b', label = r'$-\sigma$', lw = 1, alpha=0.5)
+    ax2.plot(x, psigma, color='g', label = r'$+\sigma$', lw = 1, alpha=0.5)
+
+    ax2.set_ylabel('Normalized Flux')
+    ax2.set_ylim(y[int(len(y)/2.1463)], max(y))
+
+    # Residuals
+    ax3 = fig.add_subplot(grid[2, 0], sharex=ax1)
+    diff = y - y_fit
+    ax3.scatter(x, diff, s=1, color='g', alpha=0.3)
+    diff_med = y - med_fit
+    ax3.scatter(x, diff_med, s=1, color='y', alpha = 0.3)
+
+    ax3.axhline(y=0, color='k', alpha=0.5, ls='--')
+    ax3.set_xlabel('Time [MJD]')
+    ax3.set_ylabel('Difference in flux')
+
+    # Residuals histogram
+    ax4 = fig.add_subplot(grid[2, 1], sharey=ax3)
+    ax4.hist(diff, bins=50, orientation='horizontal')
+    ax4.axhline(y=0, color='k', alpha=0.5, ls='--')
+    ax4.set_xlabel('Frequency')
+
+    plt.subplots_adjust(hspace=0.0)
+    plt.savefig(str(title) + '_pc.pdf')
+    plt.close()
+    return y_fit, med_fit, msigma, psigma

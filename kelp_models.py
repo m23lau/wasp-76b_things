@@ -76,7 +76,6 @@ def phase_offset(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark,
     """
     # Define flux for one period
     flux_1p = kelp_curve(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark, name, channel, hotspot_offset, A_B, c11)
-    time_1p = np.linspace(t0, t0+per, len(flux_1p))
 
     # Shift values by checking phase of planet at time[0], then interpolate & move the curve back to original spot
     t_sec = t0 - 0.5*per
@@ -207,6 +206,7 @@ def big_fig(x, y, yerr, model, best_fitp, median_sigmap, title):
     ax2.plot(x, msigma, color='b', label = r'$-\sigma$', lw = 1, alpha=0.5)
     ax2.plot(x, psigma, color='g', label = r'$+\sigma$', lw = 1, alpha=0.5)
 
+    ax2.axhline(y=1, color='k', alpha = 0.5, ls = '--')
     ax2.set_ylabel('Normalized Flux')
     ax2.set_ylim(y[int(len(y)/2.1463)], max(y))
 

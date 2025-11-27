@@ -1,19 +1,24 @@
+import corner
 import numpy as np
 import matplotlib.pyplot as plt
-from mcmc_funcs import log_prob, corner_plot
+from mcmc_funcs import corner_plot
 # from scipy.optimize import minimize
 import emcee as mc
 import pickle
 from statistics import stdev
 from multiprocessing import Pool
+from kelp_models import big_fig
+from joblib import Parallel, delayed
 
 
 # Start simulations
-def run_sims(init, explore_scale, logprob, x, y, yerr, n_burn, n_steps, n_runs, labels, title):
+def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n_steps, n_runs, labels, title):
     """ Run MCMC n_runs times
     Args:
         init (ndarray): List of initial guesses
         explore_scale (ndarray): Range of scatter for data points
+        model (callable): Phase curve model to use
+        loglike (callable): Log likelihood function to use
         logprob (callable): Log probability function to use
         x (ndarray): x-values of data points
         y (ndarray): y-values of data points
@@ -25,7 +30,7 @@ def run_sims(init, explore_scale, logprob, x, y, yerr, n_burn, n_steps, n_runs, 
         title (str or float): Word or number to include in plot titles
     Returns:
          tuple: ndarray, ndarray, ndarray
-         last steps of each run, guesses for the last run, flatchain that will be used in corner plot
+         best step of the run, guesses for the most recent run, flatchain used in corner plot
     """
     if type(title) == np.float64:
         title = round(title, 3)
@@ -34,7 +39,7 @@ def run_sims(init, explore_scale, logprob, x, y, yerr, n_burn, n_steps, n_runs, 
     n_walkers = 10 * n_dim
     p0 = np.array(init) + (np.random.randn(n_walkers, n_dim) * explore_scale)
 
-    with Pool(processes=6) as pool:
+    with Pool() as pool:
         moves = mc.moves.StretchMove(a=1.8)
         sampler = mc.EnsembleSampler(n_walkers, n_dim, logprob, args = (x, y, yerr), pool=pool, moves=moves)
         count = 0
@@ -44,8 +49,7 @@ def run_sims(init, explore_scale, logprob, x, y, yerr, n_burn, n_steps, n_runs, 
 
             # Set up next run with best step of previous run
             lps = [logprob(i, x, y, yerr) for i in p1_state]
-            max_lp = max(lps)
-            new_init = p1_state[lps.index(max_lp)]
+            new_init = p1_state[lps.index(max(lps))]
             rescale = explore_scale * 0.1
             p0 = new_init + np.random.randn(n_walkers, n_dim) * rescale
 
@@ -67,68 +71,96 @@ def run_sims(init, explore_scale, logprob, x, y, yerr, n_burn, n_steps, n_runs, 
         sampler.reset()
         sampler.run_mcmc(p1, n_steps, progress=True)  # Actual simulation
 
-        # gpt
-        af = sampler.acceptance_fraction
-        print("acceptance fraction (mean, min, max):", af.mean(), af.min(), af.max())
-        tau = sampler.get_autocorr_time(tol=0)
-        print("Autocorrelation time per parameter:", tau)
-        print("Mean τ:", np.mean(tau))
-        print("Run length / mean τ:", n_steps / np.mean(tau))       # should be greater than or equal to 50
+    # gpt - check acceptance fraction and autocorrelation times (make sure chain actually worked)
+    af = sampler.acceptance_fraction
+    print("acceptance fraction (mean, min, max):", af.mean(), af.min(), af.max())
+    tau = sampler.get_autocorr_time(tol=0)
+    print("Autocorrelation time per parameter:", tau)
+    print("Mean τ:", np.mean(tau))
+    print("Run length / mean τ:", n_steps / np.mean(tau))       # should be greater than or equal to 50
 
-        last_chain = sampler.get_chain()
-        last_steps = last_chain[-1]
-        gs = last_chain.transpose(2, 1, 0)           # Transpose the entire chain so that each guesses[i] shows each parameter and each
-                                                     # walker's steps in a row
+    last_chain = sampler.get_chain()
 
-        # Make n subplots, one for each parameter, to see if they converge
-        xs = np.arange(0, n_steps)
-        fig, axs = plt.subplots(n_dim)
-        fig.suptitle(str(title)+ r'$\mu$' 'm Convergence of Walkers')
-        for i in range(n_walkers):
-            for j in range(n_dim):
-                axs[j].plot(xs, gs[j][i])
+    # Find walker with highest log likelihood which will give best fit params, bt
+    all_steps = last_chain.reshape(n_steps * n_walkers, n_dim)
+    lls = Parallel(n_jobs=6)(delayed(loglike)(i, x, y, yerr) for i in all_steps)
+    bt = all_steps[lls.index(max(lls))]
 
-        for k in range(n_dim):
-            axs[k].set_ylabel(labels[k])
-        axs[-1].set_xlabel('Step Number')
-        plt.savefig(str(title)+'_convergence.pdf')
+    # Save each step of the chain and its corresponding log-likelihood
+    h = np.column_stack((all_steps, lls))
+    head = ','
+    head = head.join(labels)
+    np.savetxt(str(title)+'_entire_chain.txt', h, delimiter=',', header=head+', log-likelihood')
 
-        # Plot only the last xx% of the steps
-        last_pct = int(n_steps * 0.9)
-        fig2, axs2 = plt.subplots(n_dim)
-        fig2.suptitle(str(title)+ r'$\mu$' 'm Convergence of Walkers, last ' + str(int((n_steps - last_pct)/n_steps * 100)) + '% of steps')
+    # Transpose the entire chain so that each guesses[i] shows each parameter and each walker's steps in a row
+    gs = last_chain.transpose(2, 1, 0)
 
-        skip = int(n_steps * 0.01)
-        line = []
-        err = []
+    # Make n subplots, one for each parameter, to see if they converge
+    xs = np.arange(0, n_steps)
+    fig, axs = plt.subplots(n_dim, sharex=True)
+    fig.suptitle(str(title)+ r'$\mu$' 'm Convergence of Walkers')
+    for i in range(n_walkers):
+        for j in range(n_dim):
+            axs[j].plot(xs, gs[j][i])
 
-        for i in range(n_dim):
-            line.append(np.average(gs[i], axis=0)[last_pct::skip])         # line has shape (ndim, nsteps/skip)
-            gs_t = gs[i].transpose()[last_pct::skip]                       # transpose gs to get all the walkers in a row
-            for j in gs_t:
-                err.append(stdev(j))                                    # get stdev of each row of gs' transpose (i.e. gs column)
+    for k in range(n_dim):
+        axs[k].set_ylabel(labels[k])
+    axs[-1].set_xlabel('Step Number')
+    plt.savefig(str(title)+'_convergence.pdf')
+    plt.close()
 
-        line = np.array(line)
-        err = np.reshape(err, line.shape)  # reshape err so it has same dimensions as line
-        err = np.array(err)
-        xs = np.arange(last_pct, n_steps, skip)
+    # Plot only the last xx% of the steps
+    last_pct = int(n_steps * 0.9)
+    fig2, axs2 = plt.subplots(n_dim, sharex=True)
+    fig2.suptitle(str(title)+ r'$\mu$' 'm Convergence of Walkers, last ' + str(int((n_steps - last_pct)/n_steps * 100)) + '% of steps')
 
-        for i in range(len(line)):
-            axs2[i].plot(xs, line[i], color = 'r', marker = 'o')
-            axs2[i].fill_between(xs, line[i] - err[i], line[i] + err[i], color='r', alpha=0.3)
+    skip = int(n_steps * 0.01)
+    line = []
+    err = []
 
-        for k in range(n_dim):
-            axs2[k].set_ylabel(labels[k])
-        axs2[-1].set_xlabel('Step Number')
-        plt.savefig(str(title)+'_convergence_10pct.pdf')
+    for i in range(n_dim):
+        line.append(np.average(gs[i], axis=0)[last_pct::skip])         # line has shape (ndim, nsteps/skip)
+        gs_t = gs[i].transpose()[last_pct::skip]                       # transpose gs to get all the walkers in a row
+        for j in gs_t:
+            err.append(stdev(j))                                    # get stdev of each row of gs' transpose (i.e. gs column)
 
-        # Make corner plot with last bit of last run
-        fc = last_chain[last_pct:]
-        fc = np.reshape(fc, (len(fc)*n_walkers, n_dim))        # Last xx% of the steps for each walker is saved in fc
+    line = np.array(line)
+    err = np.reshape(err, line.shape)  # reshape err so it has same dimensions as line
+    err = np.array(err)
+    xs = np.arange(last_pct, n_steps, skip)
 
-        corner_plot(fc, labels=labels, title=title)
+    for i in range(len(line)):
+        axs2[i].plot(xs, line[i], color = 'r', marker = 'o')
+        axs2[i].fill_between(xs, line[i] - err[i], line[i] + err[i], color='r', alpha=0.3)
 
-    return np.array(last_steps), gs, fc
+    for k in range(n_dim):
+        axs2[k].set_ylabel(labels[k])
+    axs2[-1].set_xlabel('Step Number')
+    plt.savefig(str(title)+'_convergence_10pct.pdf')
+    plt.close()
+
+    # Make corner plot with last bit of last run
+    fc = last_chain[last_pct:]
+    fc = np.reshape(fc, (len(fc)*n_walkers, n_dim))        # Last xx% of the steps for each walker is saved in fc
+
+    corner_plot(fc, labels=labels, title=title)
+    fct = fc.transpose()
+
+    # ndim x 3 array that stores median and +/- 1 sigma fit params
+    msar = [corner.quantile(fct[i], [0.16, 0.50, 0.84]) for i in range(len(fct))]
+    msarr = np.array(msar).transpose()
+
+    fit_params = np.column_stack([bt, msar])
+    np.savetxt(str(title)+'_fitparams.txt', fit_params, delimiter=',', header = 'best, minus sigma, median, plus sigma')
+
+    # Plot and save phase curve
+    phasecurve, med_curve, msigma_curve, psigma_curve = big_fig(x, y, yerr, model, bt, msarr, title=title)
+
+    pcvals = np.column_stack([x, y, phasecurve, msigma_curve, med_curve, psigma_curve])
+    np.savetxt(str(title)+'_pcvals.txt', pcvals, delimiter=',', header='time, flux, phasecurve, '
+                                                                           'minus sigma, median, plus sigma')
+
+    return bt, gs, fc
 
 
 # Define data points for spitzer
@@ -149,4 +181,6 @@ explore = np.array([np.radians(2.0), 0.05, 0.05])
 #             r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
 p_labels = [r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
 
-# ls, gs, fc = run_sims(init_p, explore, log_prob, time, flux, ferr, 100, 100, 1, p_labels)
+from mcmc_funcs import pc_model, log_prob, log_likelihood
+# bt, gs, fc = run_sims(init_p, explore, pc_model, log_likelihood, log_prob, time, flux, ferr, 10, 100, 1, p_labels, title='69')
+# print(bt)

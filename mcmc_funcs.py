@@ -75,9 +75,9 @@ def log_prior(params):
     #     return prior_per + prior_rad + prior_offset
 
     # Only use 3 kelp params
-    h_off, b_alb, c_11 = params
+    h_off, b_alb, c_11, unc_scale = params
 
-    if (np.radians(-10) < h_off < np.radians(15) and 0.05 < b_alb < 0.55 and 0.10 < c_11 < 0.55):
+    if (np.radians(-10) < h_off < np.radians(15) and 0.05 < b_alb < 0.55 and 0.10 < c_11 < 0.55 and 0 < unc_scale < 100):
         return 0
 
     # Uncomment these lines to test these three params ONLY (for sanity check)
@@ -104,7 +104,12 @@ def log_likelihood(params, t, f, ferr):
     Returns:
         float: Log-likelihood estimate
     """
-    return -0.5 * np.sum((pc_model(params, t) - f)**2 / ferr**2)
+
+    h_off, alb, c_11, unc_scale = params
+    scaled_err = unc_scale * ferr
+
+    resid = f - pc_model((h_off, alb, c_11), t)
+    return -0.5 * np.sum((resid / scaled_err) ** 2 + np.log(2*np.pi * scaled_err**2))
 
 
 def log_prob(params, t, f, ferr):

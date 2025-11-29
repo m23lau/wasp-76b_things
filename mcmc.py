@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 
 
 # Start simulations
-def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n_steps, n_runs, labels, title):
+def run_sims(init, explore_scale, model, loglike, logprob, t, f, ferr, n_burn, n_steps, n_runs, labels, title):
     """ Run MCMC n_runs times
     Args:
         init (ndarray): List of initial guesses
@@ -20,9 +20,9 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
         model (callable): Phase curve model to use
         loglike (callable): Log likelihood function to use
         logprob (callable): Log probability function to use
-        x (ndarray): x-values of data points
-        y (ndarray): y-values of data points
-        yerr (ndarray): Error in y-values of data points
+        t (ndarray): Time values of data points
+        f (ndarray): Flux values of data points
+        ferr (ndarray): Error in f-values of data points
         n_burn (int): Number of burn-in steps
         n_steps (int): Number of steps in each MCMC run
         n_runs (int): Number of times to run burn ins
@@ -41,14 +41,14 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
 
     with Pool() as pool:
         moves = mc.moves.StretchMove(a=1.8)
-        sampler = mc.EnsembleSampler(n_walkers, n_dim, logprob, args = (x, y, yerr), pool=pool, moves=moves)
+        sampler = mc.EnsembleSampler(n_walkers, n_dim, logprob, args = (t, f, ferr), pool=pool, moves=moves)
         count = 0
         while count < n_runs:
             p1 = sampler.run_mcmc(p0, n_burn, progress = True)      # Burn-in
             p1_state = p1[0]
 
             # Set up next run with best step of previous run
-            lps = [logprob(i, x, y, yerr) for i in p1_state]
+            lps = [logprob(i, t, f, ferr) for i in p1_state]
             new_init = p1_state[lps.index(max(lps))]
             rescale = explore_scale * 0.1
             p0 = new_init + np.random.randn(n_walkers, n_dim) * rescale
@@ -71,7 +71,7 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
         sampler.reset()
         sampler.run_mcmc(p1, n_steps, progress=True)  # Actual simulation
 
-    # gpt - check acceptance fraction and autocorrelation times (make sure chain actually worked)
+    # gpt - check acceptance fraction and autocorrelation times, make sure chain actually worked
     af = sampler.acceptance_fraction
     print("acceptance fraction (mean, min, max):", af.mean(), af.min(), af.max())
     tau = sampler.get_autocorr_time(tol=0)
@@ -81,16 +81,16 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
 
     last_chain = sampler.get_chain()
 
-    # Find walker with highest log likelihood which will give best fit params, bt
+    # Find walker with max log likelihood which will give best fit params, bt
     all_steps = last_chain.reshape(n_steps * n_walkers, n_dim)
-    lls = Parallel(n_jobs=6)(delayed(loglike)(i, x, y, yerr) for i in all_steps)
+    lls = Parallel(n_jobs=6)(delayed(loglike)(i, t, f, ferr) for i in all_steps)
     bt = all_steps[lls.index(max(lls))]
 
     # Save each step of the chain and its corresponding log-likelihood
     h = np.column_stack((all_steps, lls))
     head = ','
     head = head.join(labels)
-    np.savetxt(str(title)+'_entire_chain.txt', h, delimiter=',', header=head+', log-likelihood')
+    np.savetxt(str(title)+'_entire_chain.txt', h, delimiter=', ', header=head+', log-likelihood')
 
     # Transpose the entire chain so that each guesses[i] shows each parameter and each walker's steps in a row
     gs = last_chain.transpose(2, 1, 0)
@@ -122,7 +122,7 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
         line.append(np.average(gs[i], axis=0)[last_pct::skip])         # line has shape (ndim, nsteps/skip)
         gs_t = gs[i].transpose()[last_pct::skip]                       # transpose gs to get all the walkers in a row
         for j in gs_t:
-            err.append(stdev(j))                                    # get stdev of each row of gs' transpose (i.e. gs column)
+            err.append(stdev(j))             # get stdev of each row of gs' transpose (i.e. gs column)
 
     line = np.array(line)
     err = np.reshape(err, line.shape)  # reshape err so it has same dimensions as line
@@ -141,23 +141,22 @@ def run_sims(init, explore_scale, model, loglike, logprob, x, y, yerr, n_burn, n
 
     # Make corner plot with last bit of last run
     fc = last_chain[last_pct:]
-    fc = np.reshape(fc, (len(fc)*n_walkers, n_dim))        # Last xx% of the steps for each walker is saved in fc
+    fc = np.reshape(fc, (len(fc)*n_walkers, n_dim))       # Last xx% of the steps for each walker is saved in fc
 
     corner_plot(fc, labels=labels, title=title)
     fct = fc.transpose()
 
     # ndim x 3 array that stores median and +/- 1 sigma fit params
-    msar = [corner.quantile(fct[i], [0.16, 0.50, 0.84]) for i in range(len(fct))]
-    msarr = np.array(msar).transpose()
+    msarr = np.array([corner.quantile(fct[i], [0.16, 0.50, 0.84]) for i in range(len(fct))])
 
-    fit_params = np.column_stack([bt, msar])
-    np.savetxt(str(title)+'_fitparams.txt', fit_params, delimiter=',', header = 'best, minus sigma, median, plus sigma')
+    fit_params = np.column_stack([bt, msarr])
+    np.savetxt(str(title)+'_fitparams.txt', fit_params, delimiter=', ', header = 'best, minus sigma, median, plus sigma')
 
-    # Plot and save phase curve
-    phasecurve, med_curve, msigma_curve, psigma_curve = big_fig(x, y, yerr, model, bt, msarr, title=title)
+    # Plot and save phase curve, cut out uncertainty param for input params of big_fig
+    phasecurve, med_curve, msigma_curve, psigma_curve = big_fig(t, f, ferr, model, bt[:-1], msarr[:-1].transpose(), title=title)
 
-    pcvals = np.column_stack([x, y, phasecurve, msigma_curve, med_curve, psigma_curve])
-    np.savetxt(str(title)+'_pcvals.txt', pcvals, delimiter=',', header='time, flux, phasecurve, '
+    pcvals = np.column_stack([t, f, phasecurve, msigma_curve, med_curve, psigma_curve])
+    np.savetxt(str(title)+'_pcvals.txt', pcvals, delimiter=', ', header='time, flux, phasecurve, '
                                                                            'minus sigma, median, plus sigma')
 
     return bt, gs, fc
@@ -173,13 +172,13 @@ ferr = np.abs(flux * (0.001 * np.random.randn(len(flux))))
 
 # Initial guess
 # init_p = np.array([57859.318, 1.81, 89.6, 0.108, 4.08, 0.01, 0.01, np.radians(-3), 0.24, 0.30])
-init_p = np.array([np.radians(-3), 0.22, 0.45])
-explore = np.array([np.radians(2.0), 0.05, 0.05])
+init_p = np.array([np.radians(-3), 0.22, 0.45, 1.0])
+explore = np.array([np.radians(2.0), 0.05, 0.05, 0.1])
 # soln = minimize(lambda p, t, f, ferr: -log_prob(p, t, f, ferr), init_p, args=(time, flux, ferr), method="Powell")
 
 # p_labels = [r'$t_0$', 'Per', 'Inc', r'$r_p$', 'a', 'q1', 'q2',
 #             r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
-p_labels = [r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
+p_labels = [r'$\Delta \phi$', r'$A_B$', r'$C_{11}$', 'Unc']
 
 from mcmc_funcs import pc_model, log_prob, log_likelihood
 # bt, gs, fc = run_sims(init_p, explore, pc_model, log_likelihood, log_prob, time, flux, ferr, 10, 100, 1, p_labels, title='69')

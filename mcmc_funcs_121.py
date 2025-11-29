@@ -33,9 +33,9 @@ def log_prior(params):
         -infinity or 0
     """
 
-    rad_p, h_off, alb, c_11 = params
+    rad_p, h_off, alb, c_11, unc_scale = params     # unc_scale is a scaling factor for uncertainty in case it needs to be increased
     if (0.0 < rad_p < 1.0 and -np.pi < h_off < np.pi and
-            -1.0 < alb < 1.0 and 0.0 < c_11 < 1.0):
+            -1.0 < alb < 1.0 and 0.0 < c_11 < 1.0 and 0 < unc_scale < 100):
         return 0
 
     else:
@@ -52,7 +52,11 @@ def log_likelihood(params, t, f, ferr):
     Returns:
         float: Log-likelihood estimate
     """
-    return -0.5 * np.sum((pc_model(params, t) - f)**2 / ferr**2)
+    rad_p, h_off, alb, c_11, unc_scale = params
+    scaled_err = unc_scale * ferr
+
+    resid = f - pc_model((rad_p, h_off, alb, c_11), t)
+    return -0.5 * np.sum((resid / scaled_err)**2 + np.log(2*np.pi * scaled_err**2))
 
 
 def log_prob(params, t, f, ferr):

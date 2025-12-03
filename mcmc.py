@@ -83,7 +83,7 @@ def run_sims(init, explore_scale, model, loglike, logprob, t, f, ferr, n_burn, n
 
     # Find walker with max log likelihood which will give best fit params, bt
     all_steps = last_chain.reshape(n_steps * n_walkers, n_dim)
-    lls = Parallel(n_jobs=6)(delayed(loglike)(i, t, f, ferr) for i in all_steps)
+    lls = Parallel(n_jobs=8)(delayed(loglike)(i, t, f, ferr) for i in all_steps)
     bt = all_steps[lls.index(max(lls))]
 
     # Save each step of the chain and its corresponding log-likelihood

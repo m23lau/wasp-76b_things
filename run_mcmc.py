@@ -15,6 +15,6 @@ p_labels = [r'$r_p$', r'$\Delta \phi$', '$A_B$','$C_{11}$', 'Unc']
 explore_scale = np.array([0.1, 2.0, 0.2, 0.2, 1.0])
 
 
-for i in range(7, len(wavelengths)):
+for i in range(8, len(wavelengths)):
     bt, gs, fc = run_sims(init_p, explore_scale, pc_model, log_likelihood, log_prob, time, fluxes[i], flux_errs[i],
                           1000, 2000, 1, p_labels, title=wavelengths[i])

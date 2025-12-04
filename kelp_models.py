@@ -1,4 +1,4 @@
-from kelp import Filter, Planet, Model
+from kelp_w_jwst import Filter, Planet, Model
 import matplotlib.pyplot as plt
 import numpy as np
 from astro_models import transit_model, eclipse

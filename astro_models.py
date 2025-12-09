@@ -1,6 +1,7 @@
+# THIS FILE IS IDENTICAL TO THE FILE IN THIS REPOSITORY: https://github.com/lisadang27/ExoMapping
+
 import numpy as np
 import batman
-from kelp import Model, Planet, Filter
 
 
 def transit_model(time, t0, per, rp, a, inc, ecc, w, u1, u2):

@@ -130,6 +130,7 @@ def kelp_transit(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark,
     new_time, flux = phase_offset(time, t0, per, inc, rp, ecc, w, a, q, fp, T_s, rp_a, limb_dark, name,
                                    channel, hotspot_offset, A_B, c11)
 
+    # Convert limb darkening parameters to a form that batman can use (similar to what's done in astro_models.py)
     u1 = 2 * np.sqrt(q[0]) * q[1]
     u2 = np.sqrt(q[0]) * (1 - 2 * q[1])
 

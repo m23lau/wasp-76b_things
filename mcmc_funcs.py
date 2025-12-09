@@ -1,3 +1,6 @@
+# There are two other versions of mcmc_funcs, this one is for test purposes and uses Spitzer data on WASP-76b
+# The MCMC workflow used in these files is similar to the one from https://github.com/bmorris3/kelp/blob/main/notebooks/demo.ipynb
+
 import kelp_models
 import numpy as np
 import matplotlib.pyplot as plt

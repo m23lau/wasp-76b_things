@@ -10,6 +10,7 @@ wavelengths = data['wavelength']
 fluxes = data['detrended_flux']/1e6 + 1
 flux_errs = data['detrended_flux_err']/1e6
 
+# Initialize guesses and create labels
 init_p = np.array([0.2, 0.0, 0.2, 0.5, 5.0])
 p_labels = [r'$r_p$', r'$\Delta \phi$', '$A_B$','$C_{11}$', 'Unc']
 explore_scale = np.array([0.1, 2.0, 0.2, 0.2, 1.0])

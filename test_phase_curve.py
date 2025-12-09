@@ -1,3 +1,7 @@
+# THIS FILE IS LARGELY IDENTICAL TO THE FILE IN THIS REPOSITORY: https://github.com/lisadang27/ExoMapping
+# + Outdated - this file was used at the very start of this project to compare the phase curve obtained from
+# Phase_Curve_Model.ipynb in Lisa's repository with one obtained from kelp
+
 import astro_models
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,10 +26,6 @@ r2   = None          #(optional): Planet radius along sub-stellar axis (in units
 r2off= None          #(optional): Angle to the elongated axis with respect to the sub-stellar axis (in degrees). Default=None.
 
 
-# astro models
-#time1 = np.linspace(t0 - 0.7*per, t0 + 0.7*per, 10000) #Array of times at which to calculate the model.
-#norm_flux = astro_models.ideal_lightcurve(time1, t0, per, rp, a, inc, ecosw, esinw, q1, q2, fp, A, B)
-
 # Data
 import pickle
 
@@ -36,12 +36,18 @@ real_time = data[1]
 real_flux = data[2] / data[4]
 plt.scatter(real_time, real_flux, color = 'r', s = 2, label = 'data', alpha = 0.3)
 
+
+# astro models phase curve, uncomment to make astro_models phase curve
+# time1 = np.linspace(t0 - 0.7*per, t0 + 0.7*per, 10000) #Array of times at which to calculate the model.
+# norm_flux = astro_models.ideal_lightcurve(time1, t0, per, rp, a, inc, ecosw, esinw, q1, q2, fp, A, B)
+
+
 # kelp phase curve
 kelpt = kelp_models.kelp_transit(real_time, t0 = 57859.318, per = per, inc = inc, rp = rp, ecc = 0, w = 51, a = a, q = [q1, q2], fp = 1.0,
                                 T_s = 6305.79, rp_a = 0.0266, limb_dark = 'quadratic', name = 'WASP-76b',
                                 channel = f"IRAC {2}", hotspot_offset = np.radians(-3), A_B = 0.2, c11 = 0.336)
 
-#plt.plot(time1, norm_flux, color = 'k', label = 'batman')
+# plt.plot(time1, norm_flux, color = 'k', label = 'batman')         # Uncomment to plot astro_models phase curve
 plt.plot(kelpt[0], kelpt[1], color = 'g', label = 'kelp transit')
 
 plt.legend()

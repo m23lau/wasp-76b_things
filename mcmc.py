@@ -2,7 +2,7 @@ import corner
 import numpy as np
 import matplotlib.pyplot as plt
 from mcmc_funcs import corner_plot
-# from scipy.optimize import minimize
+# from scipy.optimize import minimize       # don't technically need this but can uncomment (it'll just take longer)
 import emcee as mc
 import pickle
 from statistics import stdev
@@ -71,9 +71,9 @@ def run_sims(init, explore_scale, model, loglike, logprob, t, f, ferr, n_burn, n
         sampler.reset()
         sampler.run_mcmc(p1, n_steps, progress=True)  # Actual simulation
 
-    # gpt - check acceptance fraction and autocorrelation times, make sure chain actually worked
+    # Check acceptance fraction and autocorrelation times, make sure chain actually worked
     af = sampler.acceptance_fraction
-    print("acceptance fraction (mean, min, max):", af.mean(), af.min(), af.max())
+    print("acceptance fraction (mean, min, max):", af.mean(), af.min(), af.max())   # if min is ~0.0, that means there is at lesat one stuck walker
     tau = sampler.get_autocorr_time(tol=0)
     print("Autocorrelation time per parameter:", tau)
     print("Mean τ:", np.mean(tau))
@@ -83,7 +83,7 @@ def run_sims(init, explore_scale, model, loglike, logprob, t, f, ferr, n_burn, n
 
     # Find walker with max log likelihood which will give best fit params, bt
     all_steps = last_chain.reshape(n_steps * n_walkers, n_dim)
-    lls = Parallel(n_jobs=8)(delayed(loglike)(i, t, f, ferr) for i in all_steps)
+    lls = Parallel(n_jobs=8)(delayed(loglike)(i, t, f, ferr) for i in all_steps)       # Change njobs argument for more/less cores
     bt = all_steps[lls.index(max(lls))]
 
     # Save each step of the chain and its corresponding log-likelihood
@@ -180,6 +180,6 @@ explore = np.array([np.radians(2.0), 0.05, 0.05, 0.1])
 #             r'$\Delta \phi$', r'$A_B$', r'$C_{11}$']
 p_labels = [r'$\Delta \phi$', r'$A_B$', r'$C_{11}$', 'Unc']
 
-from mcmc_funcs import pc_model, log_prob, log_likelihood
+from mcmc_funcs import pc_model, log_prob, log_likelihood   # Uncomment below to test mcmc for Spitzer data
 # bt, gs, fc = run_sims(init_p, explore, pc_model, log_likelihood, log_prob, time, flux, ferr, 10, 100, 1, p_labels, title='69')
 # print(bt)

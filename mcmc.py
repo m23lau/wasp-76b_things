@@ -40,7 +40,7 @@ def run_sims(init, explore_scale, model, loglike, logprob, t, f, ferr, n_burn, n
     p0 = np.array(init) + (np.random.randn(n_walkers, n_dim) * explore_scale)
 
     with Pool() as pool:
-        moves = mc.moves.StretchMove(a=1.8)
+        moves = mc.moves.StretchMove(a=1.5)
         sampler = mc.EnsembleSampler(n_walkers, n_dim, logprob, args = (t, f, ferr), pool=pool, moves=moves)
         count = 0
         while count < n_runs:

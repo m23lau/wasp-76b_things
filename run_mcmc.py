@@ -18,4 +18,4 @@ explore_scale = np.array([0.1, 2.0, 0.2, 0.2, 0.5])
 
 for i in range(12, len(wavelengths)):
     bt, gs, fc = run_sims(init_p, explore_scale, pc_model, log_likelihood, log_prob, time, fluxes[i], flux_errs[i],
-                          10, 100, 1, p_labels, title=wavelengths[i])
+                          1000, 2000, 1, p_labels, title=wavelengths[i])
